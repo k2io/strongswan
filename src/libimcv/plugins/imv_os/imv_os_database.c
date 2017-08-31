@@ -1,5 +1,5 @@
 /*
- * Copyright (C) 2012-2014 Andreas Steffen
+ * Copyright (C) 2012-2017 Andreas Steffen
  * HSR Hochschule fuer Technik Rapperswil
  *
  * This program is free software; you can redistribute it and/or modify it
@@ -51,7 +51,7 @@ METHOD(imv_os_database_t, check_packages, status_t,
 	char *product, *package, *release, *cur_release;
 	chunk_t name, version;
 	int pid, gid, security, blacklist;
-	int count = 0, count_ok = 0, count_no_match = 0, count_blacklist = 0;
+	int count = 0, count_ok = 0, count_security = 0, count_blacklist = 0;
 	enumerator_t *e;
 	status_t status = SUCCESS;
 	bool found, match;
@@ -154,19 +154,25 @@ METHOD(imv_os_database_t, check_packages, status_t,
 					os_state->add_bad_package(os_state, package,
 											  OS_PACKAGE_STATE_BLACKLIST);
 				}
+				else if (security)
+				{
+					DBG2(DBG_IMV, "package '%s' (%s) is vulnerable",
+								   package, release);
+					os_state->add_bad_package(os_state, package,
+											  OS_PACKAGE_STATE_SECURITY);
+					count_security++;
+				}
 				else
 				{
-					DBG2(DBG_IMV, "package '%s' (%s)%s is ok", package, release,
-								   security ? " [s]" : "");
+					DBG3(DBG_IMV, "package '%s' (%s) is ok",
+								   package, release);
 					count_ok++;
 				}
 			}
 			else
 			{
-				DBG1(DBG_IMV, "package '%s' (%s) no match", package, release);
-				count_no_match++;
-				os_state->add_bad_package(os_state, package,
-										  OS_PACKAGE_STATE_SECURITY);
+				DBG1(DBG_IMV, "package '%s' (%s) no match",
+							   package, release);
 			}
 		}
 		else
@@ -176,8 +182,8 @@ METHOD(imv_os_database_t, check_packages, status_t,
 		free(package);
 		free(release);
 	}
-	os_state->set_count(os_state, count, count_no_match,
-								  count_blacklist, count_ok);
+	os_state->set_count(os_state, count, count_security, count_blacklist,
+						count_ok);
 
 	return status;
 }
